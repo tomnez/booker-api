@@ -45,23 +45,37 @@ router.post('/token', function (req, res) {
     if (!error) {
       res.json(JSON.parse(body));
     } else {
-      res.sendStatus(response.statusCode);
+      res.status(response.statusCode).send();
     }
   });
 });
 
-router.get("/resources", function (req, res) {
-  request({
-    url: 'https://www.googleapis.com/calendar/v3/users/me/calendarList',
-    headers: {
-      "content-type": "application/json",
-      "Authorization": 'Bearer ' + JSON.parse(body).access_token
-    }
+router.post('/revoke', function (req, res) {
+  var token = req.body.token;
+
+  request.get({
+    url: 'https://accounts.google.com/o/oauth2/revoke?token=' + token,
   }, function(error, response, body) {
-    console.log(body);
-    res.send({})
+    if (response.statusCode === 200) {
+      res.status(200).json({});
+    } else {
+      res.status(response.statusCode).json(error);
+    }
   });
 });
+
+// router.get("/resources", function (req, res) {
+//   request({
+//     url: 'https://www.googleapis.com/calendar/v3/users/me/calendarList',
+//     headers: {
+//       "content-type": "application/json",
+//       "Authorization": 'Bearer ' + JSON.parse(body).access_token
+//     }
+//   }, function(error, response, body) {
+//     console.log(body);
+//     res.send({})
+//   });
+// });
 
 // go!
 app.listen(port);

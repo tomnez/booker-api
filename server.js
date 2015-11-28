@@ -5,6 +5,7 @@ var express = require('express');
 var app = express();
 var bodyParser = require('body-parser');
 var request = require('request');
+var async = require('async');
 
 // express port and router
 var router = express.Router();
@@ -29,25 +30,63 @@ app.use('/api', router);
 // routes!
 router.post('/token', function (req, res) {
   var token = req.body.token;
+  var finalResponse = {};
 
-  request.post({
-    url: 'https://www.googleapis.com/oauth2/v3/token',
-    headers: {
-      "content-type": "application/x-www-form-urlencoded"
+  async.waterfall([
+    function(callback) {
+      // get token
+      request.post({
+        url: 'https://www.googleapis.com/oauth2/v3/token',
+        headers: {
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        form: {
+          "code": token,
+          "client_id": process.env.GOOGLE_API_KEY,
+          "client_secret": process.env.GOOGLE_SECRET,
+          "grant_type": "authorization_code",
+          "scope": process.env.GOOGLE_AUTH_SCOPES,
+          "redirect_uri": "http://localhost:4200/resources"
+        }
+      }, function(error, response, body) {
+        if (!error) {
+          var auth = JSON.parse(body);
+
+          finalResponse.auth = auth;
+
+          callback(null, finalResponse);
+        } else {
+          callback(error)
+        }
+      });
     },
-    form: {
-      "code": token,
-      "client_id": process.env.GOOGLE_API_KEY,
-      "client_secret": process.env.GOOGLE_SECRET,
-      "grant_type": "authorization_code",
-      "scope": "https://www.googleapis.com/auth/calendar",
-      "redirect_uri": "http://localhost:4200/resources"
-    }
-  }, function(error, response, body) {
+    function(finalResponse, callback) {
+      // get profile
+      request.get({
+        url: 'https://www.googleapis.com/plus/v1/people/me',
+        headers: {
+          "Authorization": "Bearer " + finalResponse.auth.access_token
+        }
+      }, function (error, response, body) {
+        var user = JSON.parse(body);
+
+        finalResponse.user = {
+          id: user.id,
+          type: 'user',
+          attributes: {
+            displayName: user.displayName,
+            avatar: user.image.url
+          }
+        };
+
+        callback(null, finalResponse);
+      });
+    },
+  ], function(error, finalResponse) {
     if (!error) {
-      res.json(JSON.parse(body));
+      res.json(finalResponse);
     } else {
-      res.status(response.statusCode).send();
+      res.json(error);
     }
   });
 });

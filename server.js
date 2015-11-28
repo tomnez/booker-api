@@ -1,4 +1,6 @@
 // modules
+require('dotenv').load();
+
 var express = require('express');
 var app = express();
 var bodyParser = require('body-parser');
@@ -35,8 +37,8 @@ router.post('/token', function (req, res) {
     },
     form: {
       "code": token,
-      "client_id": "405429344171-3graio22tnaht89ac52ftkb326p8cf0p.apps.googleusercontent.com",
-      "client_secret": "geFHw9uyPNddUqu8vcEqSRGo",
+      "client_id": process.env.GOOGLE_API_KEY,
+      "client_secret": process.env.GOOGLE_SECRET,
       "grant_type": "authorization_code",
       "scope": "https://www.googleapis.com/auth/calendar",
       "redirect_uri": "http://localhost:4200/resources"

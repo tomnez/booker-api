@@ -76,6 +76,14 @@ router.post('/token', function (req, res) {
           attributes: {
             displayName: user.displayName,
             avatar: user.image.url
+          },
+          relationships: {
+            resources: {
+              links: {
+                self: '/users/' + user.id + '/relationships/resources',
+                related: '/users/' + user.id + '/resources'
+              },
+            }
           }
         };
 
@@ -105,18 +113,18 @@ router.post('/revoke', function (req, res) {
   });
 });
 
-// router.get("/resources", function (req, res) {
-//   request({
-//     url: 'https://www.googleapis.com/calendar/v3/users/me/calendarList',
-//     headers: {
-//       "content-type": "application/json",
-//       "Authorization": 'Bearer ' + JSON.parse(body).access_token
-//     }
-//   }, function(error, response, body) {
-//     console.log(body);
-//     res.send({})
-//   });
-// });
+router.get("/users/:user_id/resources", function (req, res) {
+  request({
+    url: 'https://www.googleapis.com/calendar/v3/users/me/calendarList',
+    headers: {
+      "content-type": "application/json",
+      "Authorization": req.headers.authorization
+    }
+  }, function(error, response, body) {
+    console.log(body);
+    res.send({ errors: ['fart']})
+  });
+});
 
 // go!
 app.listen(port);

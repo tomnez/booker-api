@@ -6,6 +6,7 @@ var app = express();
 var bodyParser = require('body-parser');
 var request = require('request');
 var async = require('async');
+var parsers = require('./lib/parsers')();
 
 // express port and router
 var router = express.Router();
@@ -69,23 +70,7 @@ router.post('/token', function (req, res) {
         }
       }, function (error, response, body) {
         var user = JSON.parse(body);
-
-        finalResponse.user = {
-          id: user.id,
-          type: 'user',
-          attributes: {
-            displayName: user.displayName,
-            avatar: user.image.url
-          },
-          relationships: {
-            resources: {
-              links: {
-                self: '/users/' + user.id + '/relationships/resources',
-                related: '/users/' + user.id + '/resources'
-              },
-            }
-          }
-        };
+        finalResponse.user = parsers.parseUsers(user, error, null).user;
 
         callback(null, finalResponse);
       });
@@ -96,6 +81,19 @@ router.post('/token', function (req, res) {
     } else {
       res.json(error);
     }
+  });
+});
+
+router.get('/me', function (req, res) {
+  request.get({
+    url: 'https://www.googleapis.com/plus/v1/people/me',
+    headers: {
+      "Authorization": req.headers.authorization
+    }
+  }, function (error, response, body) {
+    var user = JSON.parse(body);
+    var finalResponse = parsers.parseUsers(user, error, null);
+    res.send(finalResponse);
   });
 });
 
@@ -121,8 +119,9 @@ router.get("/users/:user_id/resources", function (req, res) {
       "Authorization": req.headers.authorization
     }
   }, function(error, response, body) {
-    console.log(body);
-    res.send({ errors: ['fart']})
+    var data = JSON.parse(body);
+    var finalResponse = parsers.parseResources(data.items, error, null);
+    res.json(finalResponse);
   });
 });
 

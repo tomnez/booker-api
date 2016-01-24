@@ -12,5 +12,9 @@
     "moment": "2.10.6",
     "moment-timezone": "0.4.1",
     "request": "2.65.0"
+  },
+  "devDependencies": {
+    "gulp": "^3.9.0",
+    "gulp-nodemon": "^2.0.6"
   }
 }

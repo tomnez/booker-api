@@ -95,8 +95,13 @@ router.get('/me', function (req, res) {
     }
   }, function (error, response, body) {
     var user = JSON.parse(body);
-    var finalResponse = parsers.parseUsers(user, error, null);
-    res.send(finalResponse);
+
+    if (user.error) {
+      res.send(user.error);
+    } else {
+      var finalResponse = parsers.parseUsers(user, error, null);
+      res.send(finalResponse);
+    }
   });
 });
 

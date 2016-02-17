@@ -7,6 +7,9 @@ var bodyParser = require('body-parser');
 var request = require('request');
 var async = require('async');
 var parsers = require('./lib/parsers')();
+var moment = require('moment');
+var _ = require('lodash');
+var util = require('util');
 
 // express port and router
 var router = express.Router();
@@ -92,8 +95,13 @@ router.get('/me', function (req, res) {
     }
   }, function (error, response, body) {
     var user = JSON.parse(body);
-    var finalResponse = parsers.parseUsers(user, error, null);
-    res.send(finalResponse);
+
+    if (user.error) {
+      res.send(user.error);
+    } else {
+      var finalResponse = parsers.parseUsers(user, error, null);
+      res.send(finalResponse);
+    }
   });
 });
 
@@ -111,17 +119,62 @@ router.post('/revoke', function (req, res) {
   });
 });
 
-router.get("/users/:user_id/resources", function (req, res) {
+function getUserResources (headers, callback) {
   request({
     url: 'https://www.googleapis.com/calendar/v3/users/me/calendarList',
     headers: {
       "content-type": "application/json",
-      "Authorization": req.headers.authorization
+      "Authorization": headers.authorization
     }
   }, function(error, response, body) {
     var data = JSON.parse(body);
-    var finalResponse = parsers.parseResources(data.items, error, null);
-    res.json(finalResponse);
+    var resources = parsers.parseResources(data.items, error, null);
+
+    callback(error, resources, headers);
+  });
+};
+
+function createResourceIdsList (resources) {
+  var resourceIds = [];
+
+  for (var i = resources.data.length - 1; i >= 0; i--) {
+    resourceIds.push({ id: resources.data[i].id });
+  };
+
+  return resourceIds;
+};
+
+// TODO: add timeZone in body
+function getResourcesFreeBusy (resources, headers, callback) {
+  var resourceIds = createResourceIdsList(resources);
+  var now = moment.utc().toISOString();
+  var tomorrow = moment.utc().add(1, 'days').toISOString();
+
+  request.post({
+    url: 'https://www.googleapis.com/calendar/v3/freeBusy',
+    headers: {
+      "content-type": "application/json",
+      "Authorization": headers.authorization
+    },
+    json: true,
+    body: {
+      "timeMin": now,
+      "timeMax": tomorrow,
+      "items": resourceIds
+    }
+  }, function (error, response, body) {
+    var resourcesWithFreeBusy = parsers.addBusyBlocksToResources(resources, body.calendars);
+
+    callback(error, resourcesWithFreeBusy);
+  });
+}
+
+router.get("/users/:user_id/resources", function (req, res) {
+  async.waterfall([
+    async.apply(getUserResources, req.headers),
+    getResourcesFreeBusy
+  ], function(error, resourcesWithFreeBusy) {
+    res.json(resourcesWithFreeBusy);
   });
 });
 

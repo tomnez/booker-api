@@ -119,6 +119,33 @@ router.post('/revoke', function (req, res) {
   });
 });
 
+router.get("/users/:user_id/resources", function (req, res) {
+  async.waterfall([
+    async.apply(getUserResources, req.headers),
+    getResourcesFreeBusy
+  ], function(error, resourcesWithFreeBusy) {
+    res.json(resourcesWithFreeBusy);
+  });
+});
+
+router.get("/resources/:resource_id/events", function (req, res) {
+  var now = moment.utc().toISOString();
+  var tomorrow = moment.utc().add(1, 'days').toISOString();
+
+  request({
+    url: 'https://www.googleapis.com/calendar/v3/calendars/' + req.params.resource_id + '/events?maxResults=1&timeMin=' + now + '&timeMax=' + tomorrow,
+    headers: {
+      "content-type": "application/json",
+      "Authorization": req.headers.authorization
+    }
+  }, function(error, response, body) {
+    var data = JSON.parse(body);
+    var resourceEvent = data.items.length ? parsers.parseEvents(data.items[0]) : {};
+
+    res.json(resourceEvent);
+  });
+});
+
 function getUserResources (headers, callback) {
   request({
     url: 'https://www.googleapis.com/calendar/v3/users/me/calendarList',
@@ -168,15 +195,6 @@ function getResourcesFreeBusy (resources, headers, callback) {
     callback(error, resourcesWithFreeBusy);
   });
 }
-
-router.get("/users/:user_id/resources", function (req, res) {
-  async.waterfall([
-    async.apply(getUserResources, req.headers),
-    getResourcesFreeBusy
-  ], function(error, resourcesWithFreeBusy) {
-    res.json(resourcesWithFreeBusy);
-  });
-});
 
 // go!
 app.listen(port);

@@ -11,7 +11,7 @@
     "lodash": "3.10.1",
     "moment": "2.10.6",
     "moment-timezone": "0.4.1",
-    "request": "2.65.0"
+    "request": "2.88.2"
   },
   "devDependencies": {
     "gulp": "^3.9.0",

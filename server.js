@@ -73,16 +73,20 @@ router.post('/token', function (req, res) {
         }
       }, function (error, response, body) {
         var user = JSON.parse(body);
-        finalResponse.user = parsers.parseUsers(user, error, null).user;
+        var error = user.error ? user.error : null;
 
-        callback(null, finalResponse);
+        if (!error) {
+          finalResponse.user = parsers.parseUsers(user, error, null).user;
+        }
+
+        callback(error, finalResponse);
       });
     },
   ], function(error, finalResponse) {
     if (!error) {
       res.json(finalResponse);
     } else {
-      res.json(error);
+      res.status(error.code).send(error.message);
     }
   });
 });
@@ -95,12 +99,13 @@ router.get('/me', function (req, res) {
     }
   }, function (error, response, body) {
     var user = JSON.parse(body);
+    var error = user.error ? user.error : null;
 
-    if (user.error) {
-      res.send(user.error);
+    if (error) {
+      res.status(error.code).send(error.message);
     } else {
       var finalResponse = parsers.parseUsers(user, error, null);
-      res.send(finalResponse);
+      res.json(finalResponse);
     }
   });
 });
